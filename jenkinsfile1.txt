@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+    options { timestamps() }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/chaimabellalah123-a11y/TPJENKINS', branch: 'main'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                bat 'echo === Build : verification des fichiers ==='
+                bat '''
+                    if not exist index.html (
+                        echo ERREUR : index.html introuvable
+                        exit /b 1
+                    )
+                    if not exist style.css (
+                        echo ERREUR : style.css introuvable
+                        exit /b 1
+                    )
+                    echo index.html et style.css existent
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                bat 'echo === Test : contenu du HTML ==='
+                bat '''
+                    findstr /i "<h1" index.html
+                    if errorlevel 1 (
+                        echo ERREUR : balise h1 absente
+                        exit /b 1
+                    )
+                    findstr /i "<html" index.html
+                    if errorlevel 1 (
+                        echo ERREUR : balise html absente
+                        exit /b 1
+                    )
+                    echo Balises h1 et html presentes
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                bat 'echo === Deploy : copie des fichiers ==='
+                bat '''
+                    if not exist deploy mkdir deploy
+                    copy /Y index.html deploy\\
+                    copy /Y style.css deploy\\
+                '''
+            }
+        }
+
+        stage('Archivage') {
+            steps {
+                archiveArtifacts artifacts: 'deploy/**', fingerprint: true
+            }
+        }
+    }
+
+    post {
+        success { echo 'Build OK' }
+        failure { echo 'Build KO' }
+    }
+}
